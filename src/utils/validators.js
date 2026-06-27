@@ -5,8 +5,4 @@ export const validatePhoneNumber = (phone) => {
 
 export const validatePassword = (password) => {
   return password.length >= 6;
-};
-
-export const validateLocation = (lat, lng) => {
-  return lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
-};
+}

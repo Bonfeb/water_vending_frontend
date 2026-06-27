@@ -7,7 +7,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FiEye, FiEyeOff, FiPhone, FiLock, FiUser,
-  FiArrowRight, FiArrowLeft, FiUserPlus, FiTruck, FiDroplet
+  FiArrowRight, FiArrowLeft, FiUserPlus
 } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import { darkFieldSx } from './LoginForm';
@@ -54,7 +54,6 @@ const StepIndicator = ({ activeStep, steps }) => (
 const RegisterForm = ({ onSwitchToLogin, onSuccess }) => {
   const { register } = useAuth();
   const [activeStep, setActiveStep] = useState(0);
-  const [role, setRole] = useState('customer'); // 'customer' or 'rider'
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -64,8 +63,9 @@ const RegisterForm = ({ onSwitchToLogin, onSuccess }) => {
     phone_number: '', password: '', first_name: '', last_name: '',
   });
 
-  const set = (field) => (e) =>
+  const set = (field) => (e) => {
     setFormData((p) => ({ ...p, [field]: e.target.value }));
+  };
 
   const handleNext = (e) => {
     e.preventDefault();
@@ -88,23 +88,21 @@ const RegisterForm = ({ onSwitchToLogin, onSuccess }) => {
       setError('Please fill in all fields');
       return;
     }
-
     setLoading(true);
     setError(null);
-
     try {
-      // Add is_rider flag to payload
-      const payload = { ...formData, is_rider: role === 'rider' };
+      const payload = { ...formData };
       await register(payload);
-      
-      
       setSuccessMsg('Account created successfully! Please sign in.');
-      setTimeout(() => onSwitchToLogin(), 1500);
+      setTimeout(() => {
+        onSwitchToLogin();
+      }, 1500);
       
     } catch (err) {
       const d = err.response?.data;
       if (d && typeof d === 'object') {
-        setError(Object.values(d).flat()[0] || 'Registration failed.');
+        const errorMsg = Object.values(d).flat()[0] || 'Registration failed.';
+        setError(errorMsg);
       } else {
         setError('Registration failed. Please try again.');
       }
@@ -122,7 +120,9 @@ const RegisterForm = ({ onSwitchToLogin, onSuccess }) => {
   return (
     <>
       <Collapse in={!!error}>
-        <Alert severity="error" onClose={() => setError(null)} sx={{
+        <Alert severity="error" onClose={() => {
+          setError(null);
+        }} sx={{
           mb: 2, borderRadius: 2,
           bgcolor: 'rgba(211,47,47,0.12)', color: '#ff6b6b',
           '& .MuiAlert-icon': { color: '#ff6b6b' },
@@ -141,42 +141,6 @@ const RegisterForm = ({ onSwitchToLogin, onSuccess }) => {
           {successMsg}
         </Alert>
       </Collapse>
-
-      {/* Role Selector */}
-      <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
-        {[
-          { key: 'customer', label: 'Customer', icon: FiDroplet },
-          { key: 'rider', label: 'Rider', icon: FiTruck }
-        ].map(({ key, label, icon: Icon }) => (
-          <Box
-            key={key}
-            onClick={() => setRole(key)}
-            sx={{
-              flex: 1,
-              p: 2,
-              borderRadius: 2,
-              border: '2px solid',
-              borderColor: role === key ? '#0066cc' : 'rgba(255,255,255,0.08)',
-              bgcolor: role === key ? 'rgba(0,102,204,0.08)' : 'rgba(255,255,255,0.02)',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: 1,
-              '&:hover': {
-                borderColor: role === key ? '#0066cc' : 'rgba(255,255,255,0.2)',
-                bgcolor: role === key ? 'rgba(0,102,204,0.08)' : 'rgba(255,255,255,0.04)',
-              }
-            }}
-          >
-            <Icon size={22} color={role === key ? '#4da6ff' : 'rgba(255,255,255,0.4)'} />
-            <Typography variant="body2" fontWeight={600} sx={{ color: role === key ? '#4da6ff' : 'rgba(255,255,255,0.5)' }}>
-              {label}
-            </Typography>
-          </Box>
-        ))}
-      </Box>
 
       <StepIndicator activeStep={activeStep} steps={steps} />
 
@@ -199,7 +163,9 @@ const RegisterForm = ({ onSwitchToLogin, onSuccess }) => {
                 startAdornment: (<InputAdornment position="start"><FiLock size={18} /></InputAdornment>),
                 endAdornment: (
                   <InputAdornment position="end">
-                    <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
+                    <IconButton onClick={() => {
+                      setShowPassword(!showPassword);
+                    }} edge="end">
                       {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
                     </IconButton>
                   </InputAdornment>
@@ -286,7 +252,9 @@ const RegisterForm = ({ onSwitchToLogin, onSuccess }) => {
       <Box sx={{ mt: 3, textAlign: 'center' }}>
         <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)' }}>
           Already have an account?{' '}
-          <Box component="span" onClick={onSwitchToLogin} sx={{
+          <Box component="span" onClick={() => {
+            onSwitchToLogin();
+          }} sx={{
             color: '#4da6ff', fontWeight: 600, cursor: 'pointer',
             '&:hover': { textDecoration: 'underline' },
           }}>

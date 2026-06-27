@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  TextField, Button, InputAdornment, IconButton, Box, Typography, Alert, Collapse, CircularProgress,
+  TextField, Button, InputAdornment, IconButton, Box, Typography, CircularProgress,
 } from '@mui/material';
 import { FiEye, FiEyeOff, FiPhone, FiLock, FiLogIn } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
+import ErrorAlert from '../common/ErrorAlert';
+import SuccessToast from '../common/SuccessToast';
 
 /* ── Reusable dark field styles ── */
 export const darkFieldSx = {
@@ -39,49 +41,55 @@ const LoginForm = ({ onSwitchToRegister, onSuccess }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [successMsg, setSuccessMsg] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
-
     try {
       const profile = await login(formData.phone_number, formData.password);
-      onSuccess?.();
+      
+      setSuccessMsg('Login successful! Redirecting...');
+      
+      setTimeout(() => {
+        if (profile.is_admin || profile.is_superuser) {
+          navigate('/dashboard');
+        } else {
+          navigate('/profile');
+        }
+      }, 1000);
 
-      // Redirect based on user role
-      if (profile.is_admin) {
-        navigate('/admin');
-      } else if (profile.is_rider) {
-        navigate('/rider');
-      } else {
-        navigate('/dashboard');
-      }
     } catch (err) {
       const d = err.response?.data;
       const message =
         d?.error || d?.detail || d?.non_field_errors?.[0] ||
         Object.values(d || {}).flat()[0] ||
         'Login failed. Please try again.';
-      setError(message);
     } finally {
       setLoading(false);
     }
   };
 
-  const set = (field) => (e) =>
+  const set = (field) => (e) => {
     setFormData((p) => ({ ...p, [field]: e.target.value }));
+  };
 
   return (
     <form onSubmit={handleSubmit}>
-      <Collapse in={!!error}>
-        <Alert severity="error" onClose={() => setError(null)} sx={{
-          mb: 2, borderRadius: 2, bgcolor: 'rgba(211,47,47,0.12)', color: '#ff6b6b',
-          '& .MuiAlert-icon': { color: '#ff6b6b' }, '& .MuiAlert-action': { color: '#ff6b6b' },
-        }}>
-          {error}
-        </Alert>
-      </Collapse>
+      {/* Replaced inline alert with custom ErrorAlert */}
+      <ErrorAlert error={error} onClose={() => {
+        setError(null);
+      }} />
+      
+      {/* Added SuccessToast */}
+      <SuccessToast 
+        open={!!successMsg} 
+        message={successMsg} 
+        onClose={() => {
+          setSuccessMsg(null);
+        }} 
+      />
 
       <TextField
         fullWidth label="Phone Number" variant="outlined" margin="normal" required
@@ -100,7 +108,9 @@ const LoginForm = ({ onSwitchToRegister, onSuccess }) => {
           startAdornment: (<InputAdornment position="start"><FiLock size={18} /></InputAdornment>),
           endAdornment: (
             <InputAdornment position="end">
-              <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
+              <IconButton onClick={() => {
+                setShowPassword(!showPassword);
+              }} edge="end">
                 {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
               </IconButton>
             </InputAdornment>
@@ -121,7 +131,9 @@ const LoginForm = ({ onSwitchToRegister, onSuccess }) => {
       <Box sx={{ mt: 3, textAlign: 'center' }}>
         <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)' }}>
           Don&apos;t have an account?{' '}
-          <Box component="span" onClick={onSwitchToRegister} sx={{
+          <Box component="span" onClick={() => {
+            onSwitchToRegister();
+          }} sx={{
             color: '#4da6ff', fontWeight: 600, cursor: 'pointer',
             '&:hover': { textDecoration: 'underline' },
           }}>

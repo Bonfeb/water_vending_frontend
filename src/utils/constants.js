@@ -1,9 +1,8 @@
 export const ORDER_STATUS = {
   PENDING: 'pending',
   PAID: 'paid',
-  ASSIGNED: 'assigned',
-  PICKED: 'picked',
-  IN_TRANSIT: 'in_transit',
+  DISPATCHED: 'dispatched',
+  PREPARING: 'preparing',
   DELIVERED: 'delivered',
   CANCELLED: 'cancelled'
 };
@@ -22,21 +21,17 @@ export const BOTTLE_SIZES = [
 export const STATUS_COLORS = {
   pending: 'warning',
   paid: 'info',
-  assigned: 'primary',
-  picked: 'secondary',
-  in_transit: 'info',
+  preparing: 'secondary',
+  dispatched: 'info',
   delivered: 'success',
   cancelled: 'error'
 };
 
 export const STATUS_LABELS = {
-  pending: 'Pending Payment',
-  paid: 'Paid - Processing',
-  assigned: 'Assigned to Rider',
-  picked: 'Picked Up',
-  in_transit: 'In Transit',
+  pending: 'Pending',
+  paid: 'Paid',
+  preparing: 'Preparing',
+  dispatched: 'In Transit',
   delivered: 'Delivered',
   cancelled: 'Cancelled'
 };
-
-export const MAP_CENTER = { lat: -1.2921, lng: 36.8219 }; // Nairobi

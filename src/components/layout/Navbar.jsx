@@ -8,8 +8,8 @@ import {
 import { useTheme } from '@mui/material/styles';
 import { motion } from 'framer-motion';
 import {
-  FiMenu, FiBell, FiUser, FiLogOut, FiShoppingCart,
-  FiMapPin, FiHome, FiPackage, FiCreditCard, FiDroplet,
+  FiMenu, FiBell, FiUser, FiLogOut,
+  FiHome, FiPackage, FiCreditCard, FiDroplet, FiUsers, FiLayout, FiTag,
 } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import { useAuthModal } from '../../context/AuthModalContext';
@@ -26,8 +26,9 @@ const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notifAnchor, setNotifAnchor] = useState(null);
 
+  const isAdmin = user?.is_admin;
   const avatarInitials = user
-    ? `${user.first_name?.[0] || ''}${user.last_name?.[0] || ''}`.toUpperCase() || '?'
+    ? `${user?.first_name?.[0] || ''}${user?.last_name?.[0] || ''}`.toUpperCase() || '?'
     : '?';
 
   const handleLogout = async () => {
@@ -36,16 +37,25 @@ const Navbar = () => {
     navigate('/login');
   };
 
-  const navItems = [
-    { label: 'Home', path: '/', icon: FiHome, public: true },
-    { label: 'Dashboard', path: '/dashboard', icon: FiHome, auth: true },
-    { label: 'Orders', path: '/orders', icon: FiShoppingCart, auth: true },
-    { label: 'Bottles', path: '/bottles', icon: FiPackage, auth: true },
-    { label: 'Payments', path: '/payments', icon: FiCreditCard, auth: true },
-    { label: 'Track', path: '/track', icon: FiMapPin, auth: true },
+  const adminNavItems = [
+    { label: 'Home',      path: '/',          icon: FiHome     },
+    { label: 'Dashboard', path: '/dashboard', icon: FiLayout   },
+    { label: 'Orders',    path: '/orders',    icon: FiPackage  },
+    { label: 'Bottles',   path: '/bottles',   icon: FiDroplet  },
+    { label: 'Pricing',   path: '/pricing',   icon: FiTag      },
+    { label: 'Payments',  path: '/payments',  icon: FiCreditCard },
+    { label: 'Users',     path: '/users',     icon: FiUsers    },
   ];
 
-  const visibleItems = navItems.filter((i) => i.public || (i.auth && isAuthenticated));
+  const customerNavItems = [
+    { label: 'Home', path: '/', icon: FiHome },
+  ];
+
+  const visibleItems = isAdmin ? adminNavItems : customerNavItems;
+
+  /* active-path match: exact for '/', prefix for everything else */
+  const isActive = (path) =>
+    path === '/' ? location.pathname === '/' : location.pathname.startsWith(path);
 
   const drawer = (
     <Box sx={{ width: 280 }}>
@@ -54,57 +64,66 @@ const Navbar = () => {
         <Typography variant="h6" fontWeight={700}>AquaDrop</Typography>
       </Box>
       <Divider />
-      <List>
+      <List sx={{ px: 1, pt: 1 }}>
         {visibleItems.map((item) => (
           <ListItem
-            key={item.path} component={Link} to={item.path}
+            key={item.path}
+            component={Link}
+            to={item.path}
             onClick={() => setMobileOpen(false)}
-            selected={location.pathname === item.path}
+            selected={isActive(item.path)}
             sx={{
-              borderRadius: 2, mx: 1, mb: 0.5,
+              borderRadius: 2,
+              mb: 0.5,
               '&.Mui-selected': {
-                bgcolor: 'primary.light', color: 'primary.main',
+                bgcolor: 'primary.light',
+                color: 'primary.main',
                 '& .MuiListItemIcon-root': { color: 'primary.main' },
               },
             }}
           >
-            <ListItemIcon><item.icon size={20} /></ListItemIcon>
-            <ListItemText primary={item.label} />
+            <ListItemIcon sx={{ minWidth: 36 }}>
+              <item.icon size={19} />
+            </ListItemIcon>
+            <ListItemText primary={item.label} primaryTypographyProps={{ fontSize: '0.9rem' }} />
           </ListItem>
         ))}
       </List>
 
-      {isAuthenticated ? (
+      {isAuthenticated && (
         <>
-          <Divider sx={{ mx: 2 }} />
-          <List>
-            <ListItem component={Link} to="/profile" onClick={() => setMobileOpen(false)}
-              sx={{ borderRadius: 2, mx: 1 }}>
-              <ListItemIcon><FiUser size={20} /></ListItemIcon>
-              <ListItemText primary="Profile" />
+          <Divider sx={{ mx: 2, my: 1 }} />
+          <List sx={{ px: 1 }}>
+            <ListItem
+              component={Link}
+              to="/profile"
+              onClick={() => setMobileOpen(false)}
+              sx={{ borderRadius: 2, mb: 0.5 }}
+            >
+              <ListItemIcon sx={{ minWidth: 36 }}><FiUser size={19} /></ListItemIcon>
+              <ListItemText primary="Profile" primaryTypographyProps={{ fontSize: '0.9rem' }} />
             </ListItem>
-            <ListItem onClick={() => { setMobileOpen(false); handleLogout(); }}
-              sx={{ borderRadius: 2, mx: 1, color: 'error.main', cursor: 'pointer' }}>
-              <ListItemIcon sx={{ color: 'error.main' }}><FiLogOut size={20} /></ListItemIcon>
-              <ListItemText primary="Logout" />
+            <ListItem
+              onClick={() => { setMobileOpen(false); handleLogout(); }}
+              sx={{ borderRadius: 2, color: 'error.main', cursor: 'pointer' }}
+            >
+              <ListItemIcon sx={{ color: 'error.main', minWidth: 36 }}><FiLogOut size={19} /></ListItemIcon>
+              <ListItemText primary="Logout" primaryTypographyProps={{ fontSize: '0.9rem' }} />
             </ListItem>
           </List>
         </>
-      ) : (
-        /* ── Mobile drawer: auth buttons ── */
+      )}
+
+      {!isAuthenticated && (
         <>
-          <Divider sx={{ mx: 2 }} />
+          <Divider sx={{ mx: 2, my: 1 }} />
           <Box sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
-            <Button
-              fullWidth variant="outlined"
-              onClick={() => { setMobileOpen(false); openAuthModal('login'); }}
-            >
+            <Button fullWidth variant="outlined"
+              onClick={() => { setMobileOpen(false); openAuthModal('login'); }}>
               Login
             </Button>
-            <Button
-              fullWidth variant="contained"
-              onClick={() => { setMobileOpen(false); openAuthModal('register'); }}
-            >
+            <Button fullWidth variant="contained"
+              onClick={() => { setMobileOpen(false); openAuthModal('register'); }}>
               Register
             </Button>
           </Box>
@@ -114,10 +133,12 @@ const Navbar = () => {
   );
 
   return (
-    <AppBar position="fixed" sx={{ bgcolor: 'white', color: 'text.primary', boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}>
+    <AppBar
+      position="fixed"
+      sx={{ bgcolor: 'white', color: 'text.primary', boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}
+    >
       <Container maxWidth="xl">
         <Toolbar sx={{ justifyContent: 'space-between', px: { xs: 1, sm: 2 } }}>
-
           {isMobile && (
             <IconButton onClick={() => setMobileOpen(true)} sx={{ mr: 1 }}>
               <FiMenu />
@@ -140,12 +161,19 @@ const Navbar = () => {
             <Box sx={{ display: 'flex', gap: 0.5 }}>
               {visibleItems.map((item) => (
                 <Button
-                  key={item.path} component={Link} to={item.path}
-                  startIcon={<item.icon size={18} />}
+                  key={item.path}
+                  component={Link}
+                  to={item.path}
+                  startIcon={<item.icon size={16} />}
                   sx={{
-                    color: location.pathname === item.path ? 'primary.main' : 'text.secondary',
-                    fontWeight: location.pathname === item.path ? 600 : 400,
-                    borderRadius: 2, px: 2,
+                    color: isActive(item.path) ? 'primary.main' : 'text.secondary',
+                    fontWeight: isActive(item.path) ? 700 : 400,
+                    bgcolor: isActive(item.path) ? 'primary.50' : 'transparent',
+                    borderRadius: 2,
+                    px: 1.5,
+                    fontSize: '0.82rem',
+                    textTransform: 'none',
+                    '&:hover': { bgcolor: 'action.hover' },
                   }}
                 >
                   {item.label}
@@ -158,9 +186,13 @@ const Navbar = () => {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             {isAuthenticated ? (
               <>
-                <IconButton onClick={(e) => setNotifAnchor(e.currentTarget)}>
-                  <Badge badgeContent={3} color="error"><FiBell size={20} /></Badge>
-                </IconButton>
+                {isAdmin && (
+                  <IconButton onClick={(e) => setNotifAnchor(e.currentTarget)}>
+                    <Badge badgeContent={3} color="error">
+                      <FiBell size={20} />
+                    </Badge>
+                  </IconButton>
+                )}
 
                 <Tooltip title={`${user?.first_name || ''} ${user?.last_name || ''}`.trim()}>
                   <IconButton onClick={(e) => setAnchorEl(e.currentTarget)} sx={{ p: 0.5 }}>
@@ -170,58 +202,69 @@ const Navbar = () => {
                   </IconButton>
                 </Tooltip>
 
-                {/* Profile menu */}
-                <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}
-                  PaperProps={{ sx: { borderRadius: 2, mt: 1, minWidth: 200 } }}>
+                <Menu
+                  anchorEl={anchorEl}
+                  open={Boolean(anchorEl)}
+                  onClose={() => setAnchorEl(null)}
+                  PaperProps={{ sx: { borderRadius: 2, mt: 1, minWidth: 200 } }}
+                  transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+                  anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+                >
                   <Box sx={{ px: 2, py: 1.5 }}>
                     <Typography variant="subtitle2" fontWeight={700}>
                       {user?.first_name} {user?.last_name}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary">{user?.phone_number}</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      {user?.phone_number}
+                    </Typography>
                   </Box>
                   <Divider />
                   <MenuItem onClick={() => { setAnchorEl(null); navigate('/profile'); }}>
-                    <FiUser size={18} style={{ marginRight: 12 }} />Profile
+                    <FiUser size={18} style={{ marginRight: 12 }} /> Profile
                   </MenuItem>
                   <Divider />
                   <MenuItem onClick={handleLogout} sx={{ color: 'error.main' }}>
-                    <FiLogOut size={18} style={{ marginRight: 12 }} />Logout
+                    <FiLogOut size={18} style={{ marginRight: 12 }} /> Logout
                   </MenuItem>
                 </Menu>
 
-                {/* Notifications menu */}
-                <Menu anchorEl={notifAnchor} open={Boolean(notifAnchor)} onClose={() => setNotifAnchor(null)}
-                  PaperProps={{ sx: { borderRadius: 2, mt: 1, width: 320 } }}>
-                  <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
-                    <Typography variant="subtitle2" fontWeight={600}>Notifications</Typography>
-                  </Box>
-                  <MenuItem sx={{ py: 1.5 }}><Typography variant="body2">New order assigned to you</Typography></MenuItem>
-                  <MenuItem sx={{ py: 1.5 }}><Typography variant="body2">Order #123 delivered successfully</Typography></MenuItem>
-                </Menu>
+                {isAdmin && (
+                  <Menu
+                    anchorEl={notifAnchor}
+                    open={Boolean(notifAnchor)}
+                    onClose={() => setNotifAnchor(null)}
+                    PaperProps={{ sx: { borderRadius: 2, mt: 1, width: 320 } }}
+                    transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+                    anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+                  >
+                    <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
+                      <Typography variant="subtitle2" fontWeight={600}>Notifications</Typography>
+                    </Box>
+                    <MenuItem sx={{ py: 1.5 }}>
+                      <Typography variant="body2">New order assigned to you</Typography>
+                    </MenuItem>
+                    <MenuItem sx={{ py: 1.5 }}>
+                      <Typography variant="body2">Order #123 delivered successfully</Typography>
+                    </MenuItem>
+                  </Menu>
+                )}
               </>
             ) : (
-              /* ── Not authenticated → open modals ── */
               <Box sx={{ display: 'flex', gap: 1 }}>
-                <Button
-                  onClick={() => openAuthModal('login')}
-                  variant="outlined" size="small"
-                >
-                  Login
-                </Button>
-                <Button
-                  onClick={() => openAuthModal('register')}
-                  variant="contained" size="small"
-                >
-                  Register
-                </Button>
+                <Button onClick={() => openAuthModal('login')} variant="outlined" size="small">Login</Button>
+                <Button onClick={() => openAuthModal('register')} variant="contained" size="small">Register</Button>
               </Box>
             )}
           </Box>
         </Toolbar>
       </Container>
 
-      <Drawer anchor="left" open={mobileOpen} onClose={() => setMobileOpen(false)}
-        PaperProps={{ sx: { width: 280 } }}>
+      <Drawer
+        anchor="left"
+        open={mobileOpen}
+        onClose={() => setMobileOpen(false)}
+        PaperProps={{ sx: { width: 280 } }}
+      >
         {drawer}
       </Drawer>
     </AppBar>

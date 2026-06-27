@@ -1,12 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Box, Container, Grid, Typography, Button, Stack,
+  Box, Container, Grid, Typography, Button, Stack, Dialog,
+  DialogTitle, DialogContent, DialogActions,
 } from '@mui/material';
 import { motion } from 'framer-motion';
-import { FiDroplet, FiTruck, FiSmartphone, FiShield, FiArrowRight, FiCheckCircle } from 'react-icons/fi';
+import {
+  FiDroplet, FiTruck, FiSmartphone, FiShield,
+  FiArrowRight, FiCheckCircle, FiUser, FiUserCheck,
+} from 'react-icons/fi';
+import { useNavigate } from 'react-router-dom';
 import productService from '../services/productService';
 import PricingTable from '../components/products/PricingTable';
 import { useAuthModal } from '../context/AuthModalContext';
+import { useAuth } from '../context/AuthContext';
 
 /* ─── Floating water droplet illustration ─── */
 const WaterIllustration = () => (
@@ -77,17 +83,102 @@ const Feature = ({ icon: Icon, title, desc, delay = 0 }) => (
   </motion.div>
 );
 
+/* ─── Order Intent Dialog ─── */
+const OrderIntentDialog = ({ open, onClose, onGuest, onSignIn }) => (
+  <Dialog
+    open={open}
+    onClose={onClose}
+    PaperProps={{
+      sx: {
+        borderRadius: 3,
+        p: 1,
+        maxWidth: 400,
+        width: '100%',
+        mx: 2,
+      }
+    }}
+  >
+    <DialogTitle sx={{ fontWeight: 700, fontSize: '1.1rem', pb: 1 }}>
+      How would you like to order?
+    </DialogTitle>
+    <DialogContent sx={{ pb: 1 }}>
+      <Typography variant="body2" color="text.secondary">
+        You can place an order as a guest or sign in to track it on your account.
+      </Typography>
+    </DialogContent>
+    <DialogActions sx={{ flexDirection: 'column', gap: 1.5, px: 3, pb: 3, alignItems: 'stretch' }}>
+      <Button
+        variant="contained"
+        size="large"
+        startIcon={<FiUserCheck size={18} />}
+        onClick={onSignIn}
+        sx={{ borderRadius: '10px', fontWeight: 600, py: 1.2 }}
+      >
+        Sign in to my account
+      </Button>
+      <Button
+        variant="outlined"
+        size="large"
+        startIcon={<FiUser size={18} />}
+        onClick={onGuest}
+        sx={{ borderRadius: '10px', fontWeight: 600, py: 1.2, borderColor: 'divider', color: 'text.primary' }}
+      >
+        Continue as guest
+      </Button>
+    </DialogActions>
+  </Dialog>
+);
+
 /* ══════════════════════════════════════════ */
 const HomePage = () => {
   const [pricing, setPricing] = useState([]);
+  const [orderDialogOpen, setOrderDialogOpen] = useState(false);
+  const [pendingOrder, setPendingOrder] = useState(null);
   const { openAuthModal } = useAuthModal();
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     productService.getPricing().then(setPricing).catch(() => {});
   }, []);
 
+  const scrollToPricing = () => {
+    document.getElementById('pricing-section')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleGetStarted = () => {
+    if (user) {
+      scrollToPricing();
+    } else {
+      openAuthModal('register');
+    }
+  };
+
+  /* ✅ FIX: Store order type & size, then show dialog */
+  const handleOrderIntent = (orderType, size) => {
+    setPendingOrder({ orderType, size });
+    setOrderDialogOpen(true);
+  };
+
+  const handleContinueAsGuest = () => {
+    setOrderDialogOpen(false);
+    navigate(`/orders/new?order_type=${pendingOrder?.orderType}&size=${pendingOrder?.size}`);
+  };
+
+  const handleSignInToOrder = () => {
+    setOrderDialogOpen(false);
+    openAuthModal('login');
+  };
+
   return (
     <Box>
+      <OrderIntentDialog
+        open={orderDialogOpen}
+        onClose={() => setOrderDialogOpen(false)}
+        onGuest={handleContinueAsGuest}
+        onSignIn={handleSignInToOrder}
+      />
+
       {/* ── Hero ── */}
       <Box sx={{
         background: 'linear-gradient(145deg, #003d99 0%, #0066cc 45%, #0099e6 100%)',
@@ -109,27 +200,32 @@ const HomePage = () => {
         </Box>
 
         <Container maxWidth="lg" sx={{ position: 'relative' }}>
-          <Grid container spacing={4} alignItems="center">
-            <Grid item xs={12} md={6}>
+          <Grid container spacing={4} sx={{ alignItems: 'center' }}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <motion.div
                 initial={{ opacity: 0, x: -40 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.65 }}
               >
-                <Typography variant="h2" fontWeight={800}
-                  sx={{ lineHeight: 1.15, mb: 2, fontSize: { xs: '2rem', md: '2.6rem', lg: '3rem' } }}>
+                <Typography
+                  variant="h2"
+                  fontWeight={800}
+                  sx={{ lineHeight: 1.15, mb: 2, fontSize: { xs: '2rem', md: '2.6rem', lg: '3rem' } }}
+                >
                   Fresh Water,<br />Delivered Fast
                 </Typography>
-                <Typography variant="h6"
-                  sx={{ opacity: 0.88, mb: 3, fontWeight: 400, fontSize: { xs: '0.95rem', md: '1.05rem' }, maxWidth: 460 }}>
+                <Typography
+                  variant="h6"
+                  sx={{ opacity: 0.88, mb: 3, fontWeight: 400, fontSize: { xs: '0.95rem', md: '1.05rem' }, maxWidth: 460 }}
+                >
                   Order 5L, 10L, or 20L water bottles online. Pay instantly with M-Pesa and track your rider live.
                 </Typography>
 
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 3 }}>
-                  {/* ── Changed: opens register modal ── */}
                   <Button
-                    onClick={() => openAuthModal('register')}
-                    variant="contained" size="large"
+                    onClick={handleGetStarted}
+                    variant="contained"
+                    size="large"
                     endIcon={<FiArrowRight />}
                     sx={{
                       bgcolor: 'white', color: '#0055bb', fontWeight: 700,
@@ -138,20 +234,23 @@ const HomePage = () => {
                       transition: 'all 0.2s', boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
                     }}
                   >
-                    Get Started
+                    {user ? 'View Pricing' : 'Get Started'}
                   </Button>
-                  {/* ── Changed: opens login modal ── */}
-                  <Button
-                    onClick={() => openAuthModal('login')}
-                    variant="outlined" size="large"
-                    sx={{
-                      borderColor: 'rgba(255,255,255,0.5)', color: 'white',
-                      '&:hover': { borderColor: 'white', bgcolor: 'rgba(255,255,255,0.1)' },
-                      borderRadius: '12px', px: 4, py: 1.4, fontSize: '0.95rem',
-                    }}
-                  >
-                    Sign In
-                  </Button>
+
+                  {!user && (
+                    <Button
+                      onClick={() => openAuthModal('login')}
+                      variant="outlined"
+                      size="large"
+                      sx={{
+                        borderColor: 'rgba(255,255,255,0.5)', color: 'white',
+                        '&:hover': { borderColor: 'white', bgcolor: 'rgba(255,255,255,0.1)' },
+                        borderRadius: '12px', px: 4, py: 1.4, fontSize: '0.95rem',
+                      }}
+                    >
+                      Sign In
+                    </Button>
+                  )}
                 </Stack>
 
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: { xs: 2, md: 3 }, opacity: 0.82 }}>
@@ -165,10 +264,15 @@ const HomePage = () => {
               </motion.div>
             </Grid>
 
-            <Grid item xs={12} md={6}
-              sx={{ display: { xs: 'none', md: 'flex' }, justifyContent: 'center', alignItems: 'center' }}>
-              <motion.div initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.7, delay: 0.2 }}>
+            <Grid
+              size={{ xs: 12, md: 6 }}
+              sx={{ display: { xs: 'none', md: 'flex' }, justifyContent: 'center', alignItems: 'center' }}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.85 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.7, delay: 0.2 }}
+              >
                 <WaterIllustration />
               </motion.div>
             </Grid>
@@ -179,8 +283,11 @@ const HomePage = () => {
       {/* ── Features ── */}
       <Container maxWidth="lg" sx={{ py: { xs: 4, md: 6 } }}>
         <Box sx={{ textAlign: 'center', mb: { xs: 3, md: 4 } }}>
-          <Typography variant="h4" fontWeight={800}
-            sx={{ mt: 0.5, fontSize: { xs: '1.5rem', md: '2rem' }, lineHeight: 1.2 }}>
+          <Typography
+            variant="h4"
+            fontWeight={800}
+            sx={{ mt: 0.5, fontSize: { xs: '1.5rem', md: '2rem' }, lineHeight: 1.2 }}
+          >
             Why AquaDrop?
           </Typography>
         </Box>
@@ -190,24 +297,31 @@ const HomePage = () => {
           gap: { xs: 2, sm: 3, md: 4 },
         }}>
           {[
-            { icon: FiDroplet, title: 'Pure Water', desc: 'Fresh, clean water in 5L, 10L, and 20L sizes for every home or office need.', delay: 0 },
-            { icon: FiSmartphone, title: 'M-Pesa Payments', desc: 'Seamless STK Push payments — no cash, no hassle, instant confirmation.', delay: 0.1 },
-            { icon: FiTruck, title: 'Fast Delivery', desc: 'Riders assigned instantly. Track your delivery live on the map in real time.', delay: 0.2 },
-            { icon: FiShield, title: 'Refill & Save', desc: 'Own a bottle and refill it for a fraction of the full-bottle price.', delay: 0.3 },
+            { icon: FiDroplet,     title: 'Pure Water',      desc: 'Fresh, clean water in 5L, 10L, and 20L sizes for every home or office need.',                delay: 0   },
+            { icon: FiSmartphone,  title: 'M-Pesa Payments', desc: 'Seamless STK Push payments — no cash, no hassle, instant confirmation.',                    delay: 0.1 },
+            { icon: FiTruck,       title: 'Fast Delivery',   desc: 'Riders assigned instantly. Track your delivery live on the map in real time.',               delay: 0.2 },
+            { icon: FiShield,      title: 'Refill & Save',   desc: 'Own a bottle and refill it for a fraction of the full-bottle price.',                        delay: 0.3 },
           ].map((f) => <Feature key={f.title} {...f} />)}
         </Box>
       </Container>
 
       {/* ── Pricing ── */}
-      <Box sx={{ bgcolor: '#f0f7ff', py: { xs: 5, md: 7 }, borderTop: '1px solid', borderColor: '#ddeeff' }}>
+      <Box
+        id="pricing-section"
+        sx={{ bgcolor: '#f0f7ff', py: { xs: 5, md: 7 }, borderTop: '1px solid', borderColor: '#ddeeff' }}
+      >
         <Container maxWidth="lg">
           <Box sx={{ textAlign: 'center', mb: 4 }}>
-            <Typography variant="h4" fontWeight={800}
-              sx={{ mt: 1, fontSize: { xs: '1.75rem', md: '2.1rem' } }}>
+            <Typography
+              variant="h4"
+              fontWeight={800}
+              sx={{ mt: 1, fontSize: { xs: '1.75rem', md: '2.1rem' } }}
+            >
               Transparent Pricing. No hidden fees, ever
             </Typography>
           </Box>
-          <PricingTable pricing={pricing} />
+          {/* ✅ onOrder now receives (orderType, size) */}
+          <PricingTable pricing={pricing} onOrder={handleOrderIntent} />
         </Container>
       </Box>
     </Box>

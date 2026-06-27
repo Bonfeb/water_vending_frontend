@@ -3,12 +3,12 @@ import api from './api';
 const authService = {
 
   login: async (phoneNumber, password) => {
-    const response = await api.post('/auth/login/', {
+    const response = await api.post('/login/', {
       phone_number: phoneNumber,
       password
     });
 
-    const {access, refresh} = response.data;
+    const { access, refresh } = response.data;
     localStorage.setItem('access_token', access);
     localStorage.setItem('refresh_token', refresh);
 
@@ -20,16 +20,17 @@ const authService = {
 
   register: async (userData) => {
     const response = await api.post('/register/', userData);
-
     return response.data;
   },
 
   logout: async () => {
     try {
       const refresh = localStorage.getItem('refresh_token');
-      await api.post('/logout/', { refresh });
+      // Only attempt backend logout if a refresh token exists
+      if (refresh) {
+        await api.post('/logout/', { refresh });
+      }
     } catch (e) {
-      console.error('Logout error:', e);
     } finally {
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');
@@ -41,6 +42,7 @@ const authService = {
     const refresh = localStorage.getItem('refresh_token');
     const response = await api.post('/refresh/', { refresh });
     localStorage.setItem('access_token', response.data.access);
+    
     // If ROTATE_REFRESH_TOKENS=True, store the new refresh token too
     if (response.data.refresh) {
       localStorage.setItem('refresh_token', response.data.refresh);
@@ -50,11 +52,19 @@ const authService = {
 
   getProfile: async () => {
     const response = await api.get('/profile/');
-    return response.data;
+    // Backend returns { user: {...}, orders: [...], bottles: [...] }
+    // We only want to save the user object in context
+    return response.data.user; 
   },
 
   updateProfile: async (data) => {
     const response = await api.put('/profile/', data);
+    // Backend returns { user: {...}, message: '...' }
+    return response.data.user;
+  },
+
+  removeProfilePicture: async () => {
+    const response = await api.delete('/profile/');
     return response.data;
   },
 

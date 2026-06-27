@@ -1,252 +1,664 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  Box,
-  Paper,
-  Grid,
-  Avatar,
-  Typography,
-  TextField,
-  Button,
-  Divider,
-  IconButton,
+  Box, Paper, Avatar, Typography, TextField, Button,
+  IconButton, Chip, Tooltip, Collapse, Stack, useTheme, useMediaQuery,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+  TablePagination,
 } from '@mui/material';
-import { FiUser, FiMail, FiPhone, FiMapPin, FiEdit2, FiSave } from 'react-icons/fi';
+import {
+  FiUser, FiPhone, FiEdit2, FiSave, FiTrash2,
+  FiPackage, FiCamera, FiX, FiMapPin, FiClock, FiCheckCircle,
+} from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
-import authService from '../services/authService';
+import api from '../services/api';
 import SuccessToast from '../components/common/SuccessToast';
 import ErrorAlert from '../components/common/ErrorAlert';
 
+const statusColor = (s) => {
+  if (s === 'completed') return 'success';
+  if (s === 'cancelled') return 'error';
+  if (s === 'dispatched') return 'warning';
+  if (s === 'paid') return 'info';
+  return 'primary';
+};
+
+const zebraRowSx = {
+  '&:nth-of-type(odd)': { bgcolor: '#f8fafc' },
+  '&:hover': { bgcolor: '#eef2ff' },
+};
+
 const ProfilePage = () => {
   const { user, setUser } = useAuth();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.down('md'));
 
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [successOpen, setSuccessOpen] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [profilePicture, setProfilePicture] = useState(null);
+  const [profilePicturePreview, setProfilePicturePreview] = useState(null);
+
+  const [orders, setOrders] = useState([]);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(5);
 
   const [formData, setFormData] = useState({
     first_name: user?.first_name || '',
     last_name: user?.last_name || '',
-    email: user?.email || '',
     phone_number: user?.phone_number || '',
   });
 
-  console.log('[ProfilePage] Render — user:', user?.phone_number, '| isEditing:', isEditing, '| saving:', saving);
+  const [editingOrderId, setEditingOrderId] = useState(null);
+  const [orderFormData, setOrderFormData] = useState({
+    delivery_address: '',
+    delivery_notes: '',
+  });
+
+  useEffect(() => {
+    const fetchProfileData = async () => {
+      try {
+        const res = await api.get('/profile/');
+        if (res.data.user) {
+          setUser(res.data.user);
+          setFormData({
+            first_name: res.data.user.first_name || '',
+            last_name: res.data.user.last_name || '',
+            phone_number: res.data.user.phone_number || '',
+          });
+        }
+        setOrders(res.data.orders || []);
+      } catch (err) {
+      }
+    };
+    fetchProfileData();
+  }, [setUser]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    console.log(`[ProfilePage] Field change → ${name}:`, name === 'password' ? '***' : value);
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleToggleEdit = () => {
-    console.log('[ProfilePage] Edit mode enabled');
-    setIsEditing(true);
-  };
-
   const handleCancel = () => {
-    console.log('[ProfilePage] Cancel clicked — resetting form to current user data:', user);
     setFormData({
       first_name: user?.first_name || '',
       last_name: user?.last_name || '',
-      email: user?.email || '',
       phone_number: user?.phone_number || '',
     });
+    setProfilePicture(null);
+    setProfilePicturePreview(null);
     setError(null);
     setIsEditing(false);
-    console.log('[ProfilePage] State → isEditing: false, form reset, error cleared');
   };
 
-  const handleSave = async () => {
-    console.log('[ProfilePage] ── handleSave triggered ──────────────────');
-    console.log('[ProfilePage] Payload to send:', formData);
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setProfilePicture(file);
+    setProfilePicturePreview(URL.createObjectURL(file));
+  };
 
+  const handleSaveProfile = async () => {
     setSaving(true);
     setError(null);
-    console.log('[ProfilePage] State → saving: true, error: null');
-
     try {
-      console.log('[ProfilePage] Calling authService.updateProfile()...');
-      const updated = await authService.updateProfile(formData);
-      console.log('[ProfilePage] ✓ updateProfile() resolved. Response:', updated);
+      const data = new FormData();
+      data.append('first_name', formData.first_name);
+      data.append('last_name', formData.last_name);
+      data.append('phone_number', formData.phone_number);
+      if (profilePicture) data.append('profile_picture', profilePicture);
 
-      setUser(updated);
-      localStorage.setItem('user', JSON.stringify(updated));
-      console.log('[ProfilePage] ✓ AuthContext user updated, localStorage synced');
+      const res = await api.put('/profile/', data, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
 
+      setUser(res.data.user);
+      localStorage.setItem('user', JSON.stringify(res.data.user));
       setIsEditing(false);
+      setProfilePicture(null);
+      setProfilePicturePreview(null);
+      setSuccessMessage('Profile updated successfully!');
       setSuccessOpen(true);
-      console.log('[ProfilePage] State → isEditing: false, successOpen: true (toast should appear)');
-
     } catch (err) {
       const errorData = err.response?.data;
-      console.error('[ProfilePage] ✗ updateProfile() rejected');
-      console.error('[ProfilePage] HTTP status:', err.response?.status);
-      console.error('[ProfilePage] Server response:', errorData || err.message);
-
       const message =
         errorData && typeof errorData === 'object'
           ? Object.values(errorData).flat()[0]
-          : 'Failed to update profile. Please try again.';
-
-      console.warn('[ProfilePage] Parsed error message:', message);
+          : 'Failed to update profile.';
       setError(message);
-
     } finally {
       setSaving(false);
-      console.log('[ProfilePage] State → saving: false');
-      console.log('[ProfilePage] ── handleSave complete ───────────────────');
     }
+  };
+
+  const handleDeletePicture = async () => {
+    try {
+      await api.delete('/profile/');
+      const updatedUser = { ...user, profile_picture: null };
+      setUser(updatedUser);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      setSuccessMessage('Profile picture removed');
+      setSuccessOpen(true);
+    } catch {
+      setError('Failed to remove profile picture.');
+    }
+  };
+
+  const handleEditOrderClick = (order) => {
+    setEditingOrderId(order.id);
+    setOrderFormData({
+      delivery_address: order.delivery_address,
+      delivery_notes: order.delivery_notes,
+    });
+  };
+
+  const handleCancelOrderEdit = () => {
+    setEditingOrderId(null);
+    setOrderFormData({ delivery_address: '', delivery_notes: '' });
+  };
+
+  const handleSaveOrder = async (orderId) => {
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await api.patch('/profile/', {
+        order_id: orderId,
+        ...orderFormData,
+      });
+      setOrders(orders.map((o) => (o.id === orderId ? res.data.order : o)));
+      setEditingOrderId(null);
+      setSuccessMessage('Order updated successfully!');
+      setSuccessOpen(true);
+    } catch (err) {
+      const errorData = err.response?.data;
+      const message =
+        errorData && typeof errorData === 'object'
+          ? errorData.error || Object.values(errorData).flat()[0]
+          : 'Failed to update order.';
+      setError(message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
   };
 
   const full_name = `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || 'User';
   const avatarLetter = full_name.charAt(0).toUpperCase() || 'U';
+  const avatarSrc = profilePicturePreview || user?.profile_picture || '';
+
+  const activeOrders = orders.filter(
+    (o) => !['completed', 'cancelled'].includes(o.status)
+  );
+  const completedOrders = orders.filter((o) => o.status === 'completed');
+
+  const paginatedOrders = orders.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage
+  );
 
   return (
-    <Box sx={{ maxWidth: 900, mx: 'auto', p: 3 }}>
+    <Box sx={{ maxWidth: 1200, mx: 'auto', px: { xs: 2, sm: 3 }, py: { xs: 2.5, sm: 4 } }}>
       <SuccessToast
         open={successOpen}
-        message="Profile updated successfully!"
-        onClose={() => {
-          console.log('[ProfilePage] SuccessToast closed');
-          setSuccessOpen(false);
-        }}
+        message={successMessage}
+        onClose={() => setSuccessOpen(false)}
       />
 
-      <Paper elevation={0} sx={{ p: 4, borderRadius: 3, border: '1px solid', borderColor: 'divider' }}>
-
-        {/* Profile Header */}
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 4 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Avatar sx={{ width: 72, height: 72, bgcolor: 'primary.main', fontSize: '1.5rem' }}>
-              {avatarLetter}
-            </Avatar>
-            <Box>
-              <Typography variant="h5" fontWeight={700}>
-                {formData.first_name} {formData.last_name}
+      {/* ── Profile Card - Single Row Layout ── */}
+      <Paper
+        elevation={0}
+        sx={{
+          p: { xs: 2, sm: 3 },
+          borderRadius: 3,
+          border: '1px solid',
+          borderColor: 'divider',
+          mb: 3,
+        }}
+      >
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 2,
+            flexWrap: { xs: 'wrap', md: 'nowrap' },
+          }}
+        >
+          {/* Left: Avatar + Name + Phone - Single Row */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: '0 0 auto' }}>
+            <Box sx={{ position: 'relative' }}>
+              <Avatar
+                src={avatarSrc}
+                sx={{
+                  width: { xs: 48, sm: 56 },
+                  height: { xs: 48, sm: 56 },
+                  bgcolor: 'primary.main',
+                  fontSize: { xs: '1.1rem', sm: '1.3rem' },
+                }}
+              >
+                {avatarLetter}
+              </Avatar>
+              {isEditing && (
+                <label
+                  htmlFor="profile-pic-upload"
+                  style={{ cursor: 'pointer', position: 'absolute', bottom: -4, right: -4 }}
+                >
+                  <Box
+                    sx={{
+                      width: 24,
+                      height: 24,
+                      borderRadius: '50%',
+                      bgcolor: 'primary.main',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: '2px solid white',
+                    }}
+                  >
+                    <FiCamera size={12} color="#fff" />
+                  </Box>
+                </label>
+              )}
+              <input
+                type="file"
+                id="profile-pic-upload"
+                hidden
+                accept="image/*"
+                onChange={handleFileChange}
+              />
+            </Box>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant="h6" fontWeight={700} sx={{ lineHeight: 1.2 }}>
+                {full_name}
               </Typography>
-              <Typography color="text.secondary">Member since 2023</Typography>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
+              >
+                <FiPhone size={14} /> {user?.phone_number}
+              </Typography>
+              {profilePicturePreview && (
+                <Typography variant="caption" color="primary.main">
+                  New photo selected
+                </Typography>
+              )}
             </Box>
           </Box>
 
-          <IconButton
-            onClick={() => {
-              if (isEditing) {
-                console.log('[ProfilePage] Header save icon clicked → calling handleSave()');
-                handleSave();
-              } else {
-                console.log('[ProfilePage] Header edit icon clicked → enabling edit mode');
-                handleToggleEdit();
-              }
-            }}
-            disabled={saving}
-            color={isEditing ? 'primary' : 'default'}
-            sx={{ border: '1px solid', borderColor: 'divider' }}
-          >
-            {isEditing ? <FiSave size={20} /> : <FiEdit2 size={20} />}
-          </IconButton>
+          {/* Middle: Editable Fields - Inline Row */}
+          <Collapse in={isEditing} orientation="horizontal" sx={{ flex: 1, minWidth: 0 }}>
+            <Box
+              sx={{
+                display: 'flex',
+                gap: 1.5,
+                flexWrap: 'wrap',
+                width: '100%',
+                justifyContent: 'center',
+              }}
+            >
+              <TextField
+                size="small"
+                label="First name"
+                name="first_name"
+                value={formData.first_name}
+                onChange={handleChange}
+                sx={{ flex: '1 1 140px', minWidth: 120 }}
+              />
+              <TextField
+                size="small"
+                label="Last name"
+                name="last_name"
+                value={formData.last_name}
+                onChange={handleChange}
+                sx={{ flex: '1 1 140px', minWidth: 120 }}
+              />
+              <TextField
+                size="small"
+                label="Phone"
+                name="phone_number"
+                value={formData.phone_number}
+                onChange={handleChange}
+                sx={{ flex: '1 1 160px', minWidth: 130 }}
+              />
+            </Box>
+          </Collapse>
+
+          {/* Right: Actions */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: '0 0 auto' }}>
+            {user?.profile_picture && !isEditing && (
+              <Tooltip title="Remove photo">
+                <IconButton onClick={handleDeletePicture} color="error" size="small">
+                  <FiTrash2 size={16} />
+                </IconButton>
+              </Tooltip>
+            )}
+            {!isEditing ? (
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<FiEdit2 size={14} />}
+                onClick={() => setIsEditing(true)}
+                sx={{ borderRadius: '8px', textTransform: 'none', fontWeight: 600 }}
+              >
+                {isMobile ? 'Edit' : 'Edit Profile'}
+              </Button>
+            ) : (
+              <Stack direction="row" spacing={1}>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  color="inherit"
+                  onClick={handleCancel}
+                  disabled={saving}
+                  sx={{ borderRadius: '8px', textTransform: 'none' }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="contained"
+                  size="small"
+                  startIcon={<FiSave size={14} />}
+                  onClick={handleSaveProfile}
+                  disabled={saving}
+                  sx={{ borderRadius: '8px', textTransform: 'none', fontWeight: 600 }}
+                >
+                  {saving ? 'Saving…' : 'Save'}
+                </Button>
+              </Stack>
+            )}
+          </Box>
         </Box>
 
-        <Divider sx={{ mb: 4 }} />
-
-        <ErrorAlert
-          error={error}
-          onClose={() => {
-            console.log('[ProfilePage] ErrorAlert dismissed');
-            setError(null);
-          }}
-        />
-
-        {/* Profile Fields */}
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-              <FiUser color="#666" />
-              <Typography variant="subtitle2" color="text.secondary">First Name</Typography>
-            </Box>
-            <TextField
-              fullWidth
-              name="first_name"
-              value={formData.first_name}
-              onChange={handleChange}
-              disabled={!isEditing}
-              variant={isEditing ? 'outlined' : 'filled'}
-              InputProps={{ disableUnderline: !isEditing }}
-            />
-          </Grid>
-
-          <Grid item xs={12} md={6}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-              <FiUser color="#666" />
-              <Typography variant="subtitle2" color="text.secondary">Last Name</Typography>
-            </Box>
-            <TextField
-              fullWidth
-              name="last_name"
-              value={formData.last_name}
-              onChange={handleChange}
-              disabled={!isEditing}
-              variant={isEditing ? 'outlined' : 'filled'}
-              InputProps={{ disableUnderline: !isEditing }}
-            />
-          </Grid>
-
-          <Grid item xs={12} md={6}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-              <FiMail color="#666" />
-              <Typography variant="subtitle2" color="text.secondary">Email Address</Typography>
-            </Box>
-            <TextField
-              fullWidth
-              name="email"
-              type="email"
-              value={formData.email}
-              onChange={handleChange}
-              disabled={!isEditing}
-              variant={isEditing ? 'outlined' : 'filled'}
-              InputProps={{ disableUnderline: !isEditing }}
-            />
-          </Grid>
-
-          <Grid item xs={12} md={6}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-              <FiPhone color="#666" />
-              <Typography variant="subtitle2" color="text.secondary">Phone Number</Typography>
-            </Box>
-            <TextField
-              fullWidth
-              name="phone_number"
-              value={formData.phone_number}
-              onChange={handleChange}
-              disabled={!isEditing}
-              variant={isEditing ? 'outlined' : 'filled'}
-              InputProps={{ disableUnderline: !isEditing }}
-            />
-          </Grid>
-        </Grid>
-
-        {/* Save/Cancel buttons */}
-        {isEditing && (
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 4 }}>
-            <Button
-              variant="outlined"
-              color="inherit"
-              onClick={handleCancel}
-              disabled={saving}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="contained"
-              startIcon={<FiSave />}
-              onClick={handleSave}
-              disabled={saving}
-            >
-              {saving ? 'Saving...' : 'Save Changes'}
-            </Button>
-          </Box>
-        )}
+        <ErrorAlert error={error} onClose={() => setError(null)} />
       </Paper>
+
+      {/* ── Stats Row ── */}
+      <Box
+        sx={{
+          display: 'flex',
+          gap: 2,
+          mb: 3,
+          flexWrap: { xs: 'wrap', sm: 'nowrap' },
+        }}
+      >
+        {[
+          { label: 'Total orders', value: orders.length, icon: FiPackage, color: '#0066cc' },
+          { label: 'Active orders', value: activeOrders.length, icon: FiClock, color: '#f59e0b' },
+          { label: 'Completed', value: completedOrders.length, icon: FiCheckCircle, color: '#10b981' },
+        ].map((stat) => (
+          <Paper
+            key={stat.label}
+            elevation={0}
+            sx={{
+              p: { xs: 2, sm: 2.5 },
+              borderRadius: 3,
+              border: '1px solid',
+              borderColor: 'divider',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 2,
+              flex: 1,
+              minWidth: { xs: '100%', sm: 'auto' },
+            }}
+          >
+            <Box
+              sx={{
+                width: 44,
+                height: 44,
+                borderRadius: '12px',
+                flexShrink: 0,
+                bgcolor: `${stat.color}18`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <stat.icon size={20} color={stat.color} strokeWidth={2} />
+            </Box>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant="h6" fontWeight={700} sx={{ lineHeight: 1.2 }}>
+                {stat.value}
+              </Typography>
+              <Typography variant="caption" color="text.secondary" noWrap>
+                {stat.label}
+              </Typography>
+            </Box>
+          </Paper>
+        ))}
+      </Box>
+
+      {/* ── Orders Table with Zebra Striping & Pagination ── */}
+      <Typography
+        variant="h6"
+        fontWeight={700}
+        sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}
+      >
+        <FiPackage size={18} /> My Orders
+      </Typography>
+
+      {orders.length === 0 ? (
+        <Paper
+          elevation={0}
+          sx={{
+            p: 4,
+            textAlign: 'center',
+            borderRadius: 3,
+            border: '1px solid',
+            borderColor: 'divider',
+          }}
+        >
+          <FiPackage size={32} color="#ccc" />
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            No orders yet. Place your first order to get started.
+          </Typography>
+        </Paper>
+      ) : (
+        <Paper
+          elevation={0}
+          sx={{
+            borderRadius: 3,
+            border: '1px solid',
+            borderColor: 'divider',
+            overflow: 'hidden',
+          }}
+        >
+          <TableContainer sx={{ overflowX: 'auto' }}>
+            <Table size="small">
+              <TableHead>
+                <TableRow sx={{ bgcolor: '#eef2ff' }}>
+                  <TableCell sx={{ fontWeight: 700, whiteSpace: 'nowrap', px: 2 }}>
+                    Order ID
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 700, whiteSpace: 'nowrap', px: 2 }}>
+                    Type / Size
+                  </TableCell>
+                  {!isMobile && (
+                    <TableCell sx={{ fontWeight: 700, whiteSpace: 'nowrap', px: 2 }}>
+                      Address
+                    </TableCell>
+                  )}
+                  <TableCell sx={{ fontWeight: 700, whiteSpace: 'nowrap', px: 2 }}>
+                    Amount
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 700, whiteSpace: 'nowrap', px: 2 }}>
+                    Status
+                  </TableCell>
+                  {!isTablet && (
+                    <TableCell sx={{ fontWeight: 700, whiteSpace: 'nowrap', px: 2 }}>
+                      Date
+                    </TableCell>
+                  )}
+                  <TableCell sx={{ fontWeight: 700, whiteSpace: 'nowrap', px: 2, textAlign: 'center' }}>
+                    Actions
+                  </TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {paginatedOrders.map((order) => (
+                  <React.Fragment key={order.id}>
+                    <TableRow sx={zebraRowSx}>
+                      <TableCell sx={{ px: 2 }}>
+                        <Typography
+                          variant="body2"
+                          fontWeight={700}
+                          sx={{ fontFamily: 'monospace' }}
+                        >
+                          #{order.id}
+                        </Typography>
+                      </TableCell>
+                      <TableCell sx={{ px: 2 }}>
+                        <Typography variant="body2" noWrap>
+                          {order.order_type === 'purchase' ? 'New' : 'Refill'} · {order.size}L × {order.quantity}
+                        </Typography>
+                      </TableCell>
+                      {!isMobile && (
+                        <TableCell sx={{ px: 2 }}>
+                          <Typography
+                            variant="body2"
+                            noWrap
+                            sx={{ maxWidth: 200 }}
+                          >
+                            {order.delivery_address || '—'}
+                          </Typography>
+                        </TableCell>
+                      )}
+                      <TableCell sx={{ px: 2 }}>
+                        <Typography variant="body2" fontWeight={600}>
+                          Ksh {order.total_amount}
+                        </Typography>
+                      </TableCell>
+                      <TableCell sx={{ px: 2 }}>
+                        <Chip
+                          label={order.status.replace(/_/g, ' ')}
+                          size="small"
+                          color={statusColor(order.status)}
+                          sx={{
+                            textTransform: 'capitalize',
+                            fontWeight: 600,
+                            fontSize: '0.68rem',
+                          }}
+                        />
+                      </TableCell>
+                      {!isTablet && (
+                        <TableCell sx={{ px: 2 }}>
+                          <Typography variant="caption" color="text.secondary">
+                            {new Date(order.created_at).toLocaleDateString()}
+                          </Typography>
+                        </TableCell>
+                      )}
+                      <TableCell sx={{ px: 2, textAlign: 'center' }}>
+                        {['pending', 'preparing'].includes(order.status) && (
+                          editingOrderId === order.id ? (
+                            <Stack direction="row" spacing={0.5} justifyContent="center">
+                              <IconButton
+                                size="small"
+                                onClick={handleCancelOrderEdit}
+                                color="inherit"
+                              >
+                                <FiX size={16} />
+                              </IconButton>
+                              <IconButton
+                                size="small"
+                                onClick={() => handleSaveOrder(order.id)}
+                                disabled={saving}
+                                color="primary"
+                              >
+                                <FiSave size={16} />
+                              </IconButton>
+                            </Stack>
+                          ) : (
+                            <Tooltip title="Edit order">
+                              <IconButton
+                                size="small"
+                                onClick={() => handleEditOrderClick(order)}
+                                color="primary"
+                              >
+                                <FiEdit2 size={16} />
+                              </IconButton>
+                            </Tooltip>
+                          )
+                        )}
+                      </TableCell>
+                    </TableRow>
+
+                    {/* Inline Edit Row */}
+                    {editingOrderId === order.id && (
+                      <TableRow sx={{ bgcolor: '#fff7ed' }}>
+                        <TableCell colSpan={isMobile ? 4 : isTablet ? 5 : 6} sx={{ px: 2 }}>
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              gap: 1.5,
+                              flexWrap: 'wrap',
+                              py: 1.5,
+                            }}
+                          >
+                            <TextField
+                              size="small"
+                              label="Delivery address"
+                              value={orderFormData.delivery_address}
+                              onChange={(e) =>
+                                setOrderFormData({
+                                  ...orderFormData,
+                                  delivery_address: e.target.value,
+                                })
+                              }
+                              sx={{ flex: '1 1 200px', minWidth: 150 }}
+                              InputProps={{
+                                startAdornment: (
+                                  <FiMapPin size={14} style={{ marginRight: 8, color: '#999' }} />
+                                ),
+                              }}
+                            />
+                            <TextField
+                              size="small"
+                              label="Delivery notes"
+                              value={orderFormData.delivery_notes}
+                              onChange={(e) =>
+                                setOrderFormData({
+                                  ...orderFormData,
+                                  delivery_notes: e.target.value,
+                                })
+                              }
+                              sx={{ flex: '1 1 200px', minWidth: 150 }}
+                            />
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </React.Fragment>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          <TablePagination
+            component="div"
+            count={orders.length}
+            page={page}
+            onPageChange={handleChangePage}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+            rowsPerPageOptions={[5, 10, 25]}
+            sx={{
+              borderTop: '1px solid',
+              borderColor: 'divider',
+              '& .MuiTablePagination-select': { fontSize: '0.875rem' },
+              '& .MuiTablePagination-displayedRows': { fontSize: '0.875rem' },
+            }}
+          />
+        </Paper>
+      )}
     </Box>
   );
 };

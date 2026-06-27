@@ -9,9 +9,11 @@ import Footer from './components/layout/Footer';
 import AuthModal from './components/auth/AuthModal'; 
 import HomePage from './pages/HomePage';
 import OrdersPage from './pages/OrdersPage';
+import Users from './pages/Users';
 import OrderDetailPage from './pages/OrderDetailPage';
-import NewOrderPage from './pages/NewOrderPage';
+import CreateOrder from './components/orders/CreateOrder'
 import BottlesPage from './pages/BottlesPage';
+import Pricing from './pages/Pricing';
 import PaymentsPage from './pages/PaymentsPage';
 import AdminPage from './components/admin/AdminPage';
 import ProfilePage from './pages/ProfilePage';
@@ -52,9 +54,11 @@ function App() {
                     
                     <Route path="/dashboard" element={<PrivateRoute><AdminPage /></PrivateRoute>} />
                     <Route path="/orders" element={<PrivateRoute><OrdersPage /></PrivateRoute>} />
-                    <Route path="/orders/new" element={<PrivateRoute><NewOrderPage /></PrivateRoute>} />
+                    <Route path="/users" element={<PrivateRoute><Users /></PrivateRoute>} />
+                    <Route path="/orders/new" element={<PrivateRoute><CreateOrder /></PrivateRoute>} />
                     <Route path="/orders/:id" element={<PrivateRoute><OrderDetailPage /></PrivateRoute>} />
                     <Route path="/bottles" element={<PrivateRoute><BottlesPage /></PrivateRoute>} />
+                    <Route path="/pricing" element={<PrivateRoute><Pricing /></PrivateRoute>} />
                     <Route path="/payments" element={<PrivateRoute><PaymentsPage /></PrivateRoute>} />
                     <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
                     <Route path="*" element={<Navigate to="/" replace />} />

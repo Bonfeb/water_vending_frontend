@@ -1,23 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Container, Box, Typography, IconButton, Alert, Paper } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { FiArrowLeft, FiDroplet } from 'react-icons/fi';
+import { FiArrowLeft } from 'react-icons/fi';
 import { motion } from 'framer-motion';
 import orderService from '../services/orderService';
-import productService from '../services/productService';
-import CreateOrderForm from '../components/orders/CreateOrderForm';
+import CreateOrderForm from '../components/orders/CreateOrder';
 import SuccessToast from '../components/common/SuccessToast';
 
 const NewOrderPage = () => {
   const navigate = useNavigate();
-  const [bottles, setBottles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
-
-  useEffect(() => {
-    productService.getBottles().then(setBottles).catch(() => {});
-  }, []);
 
   const handleSubmit = async (data) => {
     setLoading(true);
@@ -36,12 +30,11 @@ const NewOrderPage = () => {
   return (
     <Box sx={{ 
       minHeight: '80vh', 
-      bgcolor: '#f7f9fc', // Subtle cool background
+      bgcolor: '#f7f9fc',
       py: { xs: 2, sm: 3, md: 4 } 
     }}>
-      <Container maxWidth="sm"> {/* sm keeps the form compact and readable */}
+      <Container maxWidth="sm">
         
-        {/* Compact Header: Back button and Title on same row */}
         <Box sx={{ 
           display: 'flex', 
           alignItems: 'center', 
@@ -80,14 +73,12 @@ const NewOrderPage = () => {
             borderRadius: 3, 
             border: '1px solid', 
             borderColor: 'divider',
-            overflow: 'hidden', // Keeps the top border radius clean
+            overflow: 'hidden',
             bgcolor: 'white'
           }}>
-            {/* Decorative Top Accent */}
             <Box sx={{ height: 4, background: 'linear-gradient(90deg, #0066cc 0%, #0099e6 100%)' }} />
             
             <Box sx={{ p: { xs: 2.5, sm: 3.5 } }}>
-              {/* Error Alert inside the card for tighter spacing */}
               {error && (
                 <Alert 
                   severity="error" 
@@ -98,7 +89,7 @@ const NewOrderPage = () => {
                 </Alert>
               )}
 
-              <CreateOrderForm bottles={bottles} onSubmit={handleSubmit} loading={loading} />
+              <CreateOrderForm onSubmit={handleSubmit} loading={loading} />
             </Box>
           </Paper>
         </motion.div>

@@ -1,4 +1,3 @@
-// src/components/pricing/PricingTable.jsx
 import React from 'react';
 import {
   Box, Paper, Typography, Chip, Button, Skeleton, useMediaQuery, useTheme
@@ -6,7 +5,6 @@ import {
 import { motion } from 'framer-motion';
 import { FiDroplet, FiShoppingBag, FiRefreshCw, FiCheck, FiStar } from 'react-icons/fi';
 import { formatCurrency } from '../../utils/formatters';
-import { useNavigate } from 'react-router-dom';
 
 const sizeLabels = {
   5: 'Small',
@@ -14,8 +12,7 @@ const sizeLabels = {
   20: 'Large',
 };
 
-const PricingTable = ({ pricing, loading }) => {
-  const navigate = useNavigate();
+const PricingTable = ({ pricing, loading, onOrder }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
@@ -64,8 +61,8 @@ const PricingTable = ({ pricing, loading }) => {
       width: '100%',
     }}>
       {pricingArray.map((p, idx) => {
-        // ── FIXED: use capacity_litres from backend ──
-        const sizeNum = Number(p.capacity_litres) || 20;
+        // ✅ FIX: use p.size (integer) instead of p.capacity_litres
+        const sizeNum = Number(p.size) || 20;
         const label = sizeLabels[sizeNum] || 'Standard';
         const isFeatured = sizeNum === 10;
 
@@ -123,11 +120,11 @@ const PricingTable = ({ pricing, loading }) => {
                 }}>
                   <FiDroplet size={isMobile ? 18 : 20} />
                 </Box>
-                {/* ── FIXED: display capacity_litres ── */}
+                {/* ✅ FIX: use p.size instead of p.capacity_litres */}
                 <Typography variant="h6" fontWeight={900}
                   sx={{ color: 'primary.main', letterSpacing: '-0.03em', lineHeight: 1.1,
                     fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
-                  {p.capacity_litres}L
+                  {sizeNum}L
                 </Typography>
                 <Typography variant="caption" color="text.secondary"
                   sx={{ fontSize: '0.7rem', fontWeight: 500 }}>
@@ -177,7 +174,7 @@ const PricingTable = ({ pricing, loading }) => {
                 <Box sx={{ mt: 'auto', display: 'flex', gap: 1 }}>
                   <Button fullWidth variant="contained" size="small"
                     startIcon={<FiShoppingBag size={13} />}
-                    onClick={() => navigate('/orders/new')}
+                    onClick={() => onOrder?.('purchase', sizeNum)}
                     sx={{
                       borderRadius: 1.5, fontWeight: 700, textTransform: 'none',
                       fontSize: '0.75rem', py: 0.5,
@@ -192,7 +189,7 @@ const PricingTable = ({ pricing, loading }) => {
                   </Button>
                   <Button fullWidth variant="outlined" size="small"
                     startIcon={<FiRefreshCw size={13} />}
-                    onClick={() => navigate('/orders/new')}
+                    onClick={() => onOrder?.('refill', sizeNum)}
                     sx={{
                       borderRadius: 1.5, fontWeight: 700, textTransform: 'none',
                       fontSize: '0.75rem', py: 0.5, borderColor: 'divider', color: 'text.primary',
