@@ -14,7 +14,6 @@ import PricingTable from '../components/products/PricingTable';
 import { useAuthModal } from '../context/AuthModalContext';
 import { useAuth } from '../context/AuthContext';
 
-/* ─── Floating water droplet illustration ─── */
 const WaterIllustration = () => (
   <motion.div
     animate={{ y: [0, -14, 0] }}
@@ -54,7 +53,6 @@ const WaterIllustration = () => (
   </motion.div>
 );
 
-/* ─── Feature card ─── */
 const Feature = ({ icon: Icon, title, desc, delay = 0 }) => (
   <motion.div
     initial={{ opacity: 0, y: 24 }}
@@ -83,7 +81,6 @@ const Feature = ({ icon: Icon, title, desc, delay = 0 }) => (
   </motion.div>
 );
 
-/* ─── Order Intent Dialog ─── */
 const OrderIntentDialog = ({ open, onClose, onGuest, onSignIn }) => (
   <Dialog
     open={open}
@@ -129,7 +126,6 @@ const OrderIntentDialog = ({ open, onClose, onGuest, onSignIn }) => (
   </Dialog>
 );
 
-/* ══════════════════════════════════════════ */
 const HomePage = () => {
   const [pricing, setPricing] = useState([]);
   const [orderDialogOpen, setOrderDialogOpen] = useState(false);
@@ -154,7 +150,6 @@ const HomePage = () => {
     }
   };
 
-  /* ✅ FIX: Store order type & size, then show dialog */
   const handleOrderIntent = (orderType, size) => {
     setPendingOrder({ orderType, size });
     setOrderDialogOpen(true);
