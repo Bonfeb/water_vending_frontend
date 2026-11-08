@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   TextField, Button, InputAdornment, IconButton, Box, Typography,
   Grid, Alert, Collapse, CircularProgress,
@@ -7,7 +6,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FiEye, FiEyeOff, FiPhone, FiLock, FiUser,
-  FiArrowRight, FiArrowLeft, FiUserPlus
+  FiArrowRight, FiArrowLeft, FiUserPlus,
 } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import { darkFieldSx } from './LoginForm';
@@ -51,13 +50,16 @@ const StepIndicator = ({ activeStep, steps }) => (
   </Box>
 );
 
-const RegisterForm = ({ onSwitchToLogin, onSuccess }) => {
+/**
+ * onRegistered(message) is called after a successful registration.
+ * The parent (AuthModal) shows the toast and switches to the Sign In tab.
+ */
+const RegisterForm = ({ onSwitchToLogin, onRegistered }) => {
   const { register } = useAuth();
   const [activeStep, setActiveStep] = useState(0);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [successMsg, setSuccessMsg] = useState(null);
 
   const [formData, setFormData] = useState({
     phone_number: '', password: '', first_name: '', last_name: '',
@@ -71,6 +73,10 @@ const RegisterForm = ({ onSwitchToLogin, onSuccess }) => {
     e.preventDefault();
     if (!formData.phone_number || !formData.password) {
       setError('Please fill in all fields');
+      return;
+    }
+    if (formData.password.length < 4) {
+      setError('Password must be at least 4 characters');
       return;
     }
     setError(null);
@@ -91,18 +97,13 @@ const RegisterForm = ({ onSwitchToLogin, onSuccess }) => {
     setLoading(true);
     setError(null);
     try {
-      const payload = { ...formData };
-      await register(payload);
-      setSuccessMsg('Account created successfully! Please sign in.');
-      setTimeout(() => {
-        onSwitchToLogin();
-      }, 1500);
-      
+      await register({ ...formData });
+      // Parent shows toast and flips to the Sign In tab
+      onRegistered?.('Account created successfully! Please sign in.');
     } catch (err) {
       const d = err.response?.data;
       if (d && typeof d === 'object') {
-        const errorMsg = Object.values(d).flat()[0] || 'Registration failed.';
-        setError(errorMsg);
+        setError(Object.values(d).flat()[0] || 'Registration failed.');
       } else {
         setError('Registration failed. Please try again.');
       }
@@ -117,28 +118,24 @@ const RegisterForm = ({ onSwitchToLogin, onSuccess }) => {
     exit:   (dir) => ({ opacity: 0, x: dir * -20 }),
   };
 
+  const primaryBtnSx = {
+    px: 4, borderRadius: 2, textTransform: 'none', fontWeight: 600,
+    background: 'linear-gradient(135deg, #0055b3 0%, #0088dd 100%)',
+    boxShadow: '0 4px 24px rgba(0,102,204,0.35)',
+    '&:hover': { background: 'linear-gradient(135deg, #004d9e 0%, #0077cc 100%)', boxShadow: '0 6px 32px rgba(0,102,204,0.45)' },
+    '&.Mui-disabled': { background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.25)', boxShadow: 'none' },
+  };
+
   return (
     <>
       <Collapse in={!!error}>
-        <Alert severity="error" onClose={() => {
-          setError(null);
-        }} sx={{
+        <Alert severity="error" onClose={() => setError(null)} sx={{
           mb: 2, borderRadius: 2,
           bgcolor: 'rgba(211,47,47,0.12)', color: '#ff6b6b',
           '& .MuiAlert-icon': { color: '#ff6b6b' },
           '& .MuiAlert-action': { color: '#ff6b6b' },
         }}>
           {error}
-        </Alert>
-      </Collapse>
-
-      <Collapse in={!!successMsg}>
-        <Alert severity="success" sx={{
-          mb: 2, borderRadius: 2,
-          bgcolor: 'rgba(46,125,50,0.12)', color: '#69f0ae',
-          '& .MuiAlert-icon': { color: '#69f0ae' },
-        }}>
-          {successMsg}
         </Alert>
       </Collapse>
 
@@ -150,7 +147,7 @@ const RegisterForm = ({ onSwitchToLogin, onSuccess }) => {
             <TextField
               fullWidth label="Phone Number" variant="outlined" margin="normal" required
               value={formData.phone_number} onChange={set('phone_number')}
-              InputProps={{ startAdornment: (<InputAdornment position="start"><FiPhone size={18} /></InputAdornment>), }}
+              InputProps={{ startAdornment: (<InputAdornment position="start"><FiPhone size={18} /></InputAdornment>) }}
               placeholder="07XX XXX XXX"
               sx={{ ...darkFieldSx, mb: 1.5 }}
             />
@@ -163,9 +160,7 @@ const RegisterForm = ({ onSwitchToLogin, onSuccess }) => {
                 startAdornment: (<InputAdornment position="start"><FiLock size={18} /></InputAdornment>),
                 endAdornment: (
                   <InputAdornment position="end">
-                    <IconButton onClick={() => {
-                      setShowPassword(!showPassword);
-                    }} edge="end">
+                    <IconButton onClick={() => setShowPassword((s) => !s)} edge="end">
                       {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
                     </IconButton>
                   </InputAdornment>
@@ -182,7 +177,7 @@ const RegisterForm = ({ onSwitchToLogin, onSuccess }) => {
                 <TextField
                   fullWidth label="First Name" variant="outlined" margin="normal" required
                   value={formData.first_name} onChange={set('first_name')}
-                  InputProps={{ startAdornment: (<InputAdornment position="start"><FiUser size={18} /></InputAdornment>), }}
+                  InputProps={{ startAdornment: (<InputAdornment position="start"><FiUser size={18} /></InputAdornment>) }}
                   sx={darkFieldSx}
                 />
               </Grid>
@@ -190,7 +185,7 @@ const RegisterForm = ({ onSwitchToLogin, onSuccess }) => {
                 <TextField
                   fullWidth label="Last Name" variant="outlined" margin="normal" required
                   value={formData.last_name} onChange={set('last_name')}
-                  InputProps={{ startAdornment: (<InputAdornment position="start"><FiUser size={18} /></InputAdornment>), }}
+                  InputProps={{ startAdornment: (<InputAdornment position="start"><FiUser size={18} /></InputAdornment>) }}
                   sx={darkFieldSx}
                 />
               </Grid>
@@ -222,13 +217,7 @@ const RegisterForm = ({ onSwitchToLogin, onSuccess }) => {
             variant="contained"
             disabled={loading}
             startIcon={loading ? <CircularProgress size={16} color="inherit" /> : <FiUserPlus />}
-            sx={{
-              px: 4, borderRadius: 2, textTransform: 'none', fontWeight: 600,
-              background: 'linear-gradient(135deg, #0055b3 0%, #0088dd 100%)',
-              boxShadow: '0 4px 24px rgba(0,102,204,0.35)',
-              '&:hover': { background: 'linear-gradient(135deg, #004d9e 0%, #0077cc 100%)', boxShadow: '0 6px 32px rgba(0,102,204,0.45)' },
-              '&.Mui-disabled': { background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.25)', boxShadow: 'none' },
-            }}
+            sx={primaryBtnSx}
           >
             {loading ? 'Creating…' : 'Create Account'}
           </Button>
@@ -237,12 +226,7 @@ const RegisterForm = ({ onSwitchToLogin, onSuccess }) => {
             onClick={handleNext}
             variant="contained"
             endIcon={<FiArrowRight />}
-            sx={{
-              px: 4, borderRadius: 2, textTransform: 'none', fontWeight: 600,
-              background: 'linear-gradient(135deg, #0055b3 0%, #0088dd 100%)',
-              boxShadow: '0 4px 24px rgba(0,102,204,0.35)',
-              '&:hover': { background: 'linear-gradient(135deg, #004d9e 0%, #0077cc 100%)', boxShadow: '0 6px 32px rgba(0,102,204,0.45)' },
-            }}
+            sx={primaryBtnSx}
           >
             Next
           </Button>
@@ -252,9 +236,7 @@ const RegisterForm = ({ onSwitchToLogin, onSuccess }) => {
       <Box sx={{ mt: 3, textAlign: 'center' }}>
         <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)' }}>
           Already have an account?{' '}
-          <Box component="span" onClick={() => {
-            onSwitchToLogin();
-          }} sx={{
+          <Box component="span" onClick={() => onSwitchToLogin()} sx={{
             color: '#4da6ff', fontWeight: 600, cursor: 'pointer',
             '&:hover': { textDecoration: 'underline' },
           }}>
