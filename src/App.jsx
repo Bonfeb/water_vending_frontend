@@ -48,14 +48,14 @@ function App() {
                   <Routes>
                     <Route path="/" element={<HomePage />} />
                     
-                    {/* Redirect old auth routes to home (modals will handle auth) */}
                     <Route path="/login" element={<Navigate to="/" replace />} />
                     <Route path="/register" element={<Navigate to="/" replace />} />
+                    <Route path="/orders/new" element={<CreateOrder />} />
+
                     
                     <Route path="/dashboard" element={<PrivateRoute><AdminPage /></PrivateRoute>} />
                     <Route path="/orders" element={<PrivateRoute><OrdersPage /></PrivateRoute>} />
                     <Route path="/users" element={<PrivateRoute><Users /></PrivateRoute>} />
-                    <Route path="/orders/new" element={<PrivateRoute><CreateOrder /></PrivateRoute>} />
                     <Route path="/orders/:id" element={<PrivateRoute><OrderDetailPage /></PrivateRoute>} />
                     <Route path="/bottles" element={<PrivateRoute><BottlesPage /></PrivateRoute>} />
                     <Route path="/pricing" element={<PrivateRoute><Pricing /></PrivateRoute>} />

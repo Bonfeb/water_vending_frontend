@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box, Paper, Avatar, Typography, TextField, Button,
   IconButton, Chip, Tooltip, Collapse, Stack, useTheme, useMediaQuery,
@@ -6,7 +7,7 @@ import {
   TablePagination,
 } from '@mui/material';
 import {
-  FiUser, FiPhone, FiEdit2, FiSave, FiTrash2,
+  FiUser, FiPhone, FiEdit2, FiSave, FiTrash2, FiPlus,
   FiPackage, FiCamera, FiX, FiMapPin, FiClock, FiCheckCircle,
 } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
@@ -29,6 +30,7 @@ const zebraRowSx = {
 
 const ProfilePage = () => {
   const { user, setUser } = useAuth();
+  const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isTablet = useMediaQuery(theme.breakpoints.down('md'));
@@ -75,6 +77,10 @@ const ProfilePage = () => {
     };
     fetchProfileData();
   }, [setUser]);
+
+  const handleNewOrder = () => {
+    navigate('/orders/new');
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -438,14 +444,39 @@ const ProfilePage = () => {
         ))}
       </Box>
 
-      {/* ── Orders Table with Zebra Striping & Pagination ── */}
-      <Typography
-        variant="h6"
-        fontWeight={700}
-        sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}
+      {/* ── Orders header with New Order button ── */}
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 2,
+          mb: 2,
+        }}
       >
-        <FiPackage size={18} /> My Orders
-      </Typography>
+        <Typography
+          variant="h6"
+          fontWeight={700}
+          sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+        >
+          <FiPackage size={18} /> My Orders
+        </Typography>
+
+        <Button
+          variant="contained"
+          size="small"
+          startIcon={<FiPlus size={16} />}
+          onClick={handleNewOrder}
+          sx={{
+            borderRadius: '8px',
+            textTransform: 'none',
+            fontWeight: 600,
+            px: 2,
+          }}
+        >
+          {isMobile ? 'New' : 'New Order'}
+        </Button>
+      </Box>
 
       {orders.length === 0 ? (
         <Paper
@@ -459,9 +490,17 @@ const ProfilePage = () => {
           }}
         >
           <FiPackage size={32} color="#ccc" />
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1, mb: 2 }}>
             No orders yet. Place your first order to get started.
           </Typography>
+          <Button
+            variant="contained"
+            startIcon={<FiPlus size={16} />}
+            onClick={handleNewOrder}
+            sx={{ borderRadius: '10px', textTransform: 'none', fontWeight: 600 }}
+          >
+            Place an order
+          </Button>
         </Paper>
       ) : (
         <Paper
