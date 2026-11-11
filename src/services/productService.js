@@ -29,58 +29,58 @@ const productService = {
       params.append('is_active', String(filters.is_active));
     }
     const response = await api.get(
-      `/admin/bottles/?${params.toString()}`
+      `/bottles/?${params.toString()}`
     );
     return response.data;
   },
 
   staffAddBottle: async (bottleData) => {
-    const response = await api.post('/admin/bottles/', bottleData);
+    const response = await api.post('/bottles/', bottleData);
     return response.data;
   },
 
   staffGetBottle: async (bottleId) => {
-    const response = await api.get(`/admin/bottle/${bottleId}/`);
+    const response = await api.get(`/bottle/${bottleId}/`);
     return response.data;
   },
 
   staffUpdateBottle: async (bottleId, bottleData) => {
     const response = await api.put(
-      `/admin/bottle/${bottleId}/`, bottleData
+      `/bottle/${bottleId}/`, bottleData
     );
     return response.data;
   },
 
   staffDeleteBottle: async (bottleId) => {
-    const response = await api.delete(`/admin/bottle/${bottleId}/`);
+    const response = await api.delete(`/bottle/${bottleId}/`);
     return response.data;
   },
 
   staffGetPricingList: async () => {
-    const response = await api.get('/admin/pricing/');
+    const response = await api.get('/pricing/');
     return response.data;
   },
 
   staffAddPricing: async (pricingData) => {
-    const response = await api.post('/admin/pricing/', pricingData);
+    const response = await api.post('/pricing/', pricingData);
     return response.data;
   },
 
   staffGetPricing: async (pricingId) => {
-    const response = await api.get(`/admin/pricing/${pricingId}/`);
+    const response = await api.get(`/pricing/${pricingId}/`);
     return response.data;
   },
 
   staffUpdatePricing: async (pricingId, pricingData) => {
     const response = await api.put(
-      `/admin/pricing/${pricingId}/`, pricingData
+      `/pricing/${pricingId}/`, pricingData
     );
     return response.data;
   },
 
   staffDeletePricing: async (pricingId) => {
     const response = await api.delete(
-      `/admin/pricing/${pricingId}/`
+      `/pricing/${pricingId}/`
     );
     return response.data;
   },

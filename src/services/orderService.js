@@ -42,22 +42,22 @@ const orderService = {
     if (filters.status) params.append('status', filters.status);
     if (filters.order_type) params.append('order_type', filters.order_type);
     if (filters.search) params.append('search', filters.search);
-    const response = await api.get(`/admin/orders/?${params.toString()}`);
+    const response = await api.get(`/orders/?${params.toString()}`);
     return response.data;
   },
 
   staffGetOrder: async (orderId) => {
-    const response = await api.get(`/admin/orders/${orderId}/`);
+    const response = await api.get(`/orders/${orderId}/`);
     return response.data;
   },
 
   staffUpdateOrder: async (orderId, orderData) => {
-    const response = await api.put(`/admin/orders/${orderId}/`, orderData);
+    const response = await api.put(`/orders/${orderId}/`, orderData);
     return response.data;
   },
 
   staffCancelOrder: async (orderId) => {
-    const response = await api.delete(`/admin/orders/${orderId}/`);
+    const response = await api.delete(`/orders/${orderId}/`);
     return response.data;
   },
 
